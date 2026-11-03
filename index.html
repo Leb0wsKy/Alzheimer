@@ -200,11 +200,11 @@
   .notch { width: 80px; height: 22px; background: #0f1113; border-radius: 0 0 14px 14px; margin: 0 auto; flex: none; }
   .scr-pad { padding: 18px 18px 20px; display: flex; flex-direction: column; flex: 1; }
   .scr-label { font-size: 10px; letter-spacing: .14em; text-transform: uppercase; color: var(--ink-3); font-weight: 600; }
-  .wearer-time { font-family: "Instrument Serif", serif; font-size: 58px; line-height: 1; margin: 16px 0 6px; }
-  .wearer-msg { font-size: 19px; line-height: 1.3; font-weight: 600; margin-top: 14px; }
-  .wearer-card { background: #fff; border-radius: 20px; padding: 16px; margin-top: 18px; border: 1px solid var(--line); }
-  .pill-dot { width: 40px; height: 40px; border-radius: 50%; background: linear-gradient(135deg,#7aa7e0,#3e6fb3); margin-bottom: 10px; }
-  .big-btn { margin-top: auto; background: var(--accent); color: #fff; border-radius: 18px; text-align: center; padding: 16px; font-weight: 700; font-size: 17px; }
+  .wearer-time { font-family: "Instrument Serif", serif; font-size: 52px; line-height: 1; margin: 12px 0 4px; }
+  .wearer-msg { font-size: 17px; line-height: 1.3; font-weight: 600; margin-top: 12px; }
+  .wearer-card { background: #fff; border-radius: 18px; padding: 12px 14px; margin-top: 14px; border: 1px solid var(--line); display: flex; gap: 12px; align-items: center; }
+  .pill-dot { flex: none; width: 32px; height: 32px; border-radius: 50%; background: linear-gradient(135deg,#7aa7e0,#3e6fb3); }
+  .big-btn { margin-top: auto; flex: none; background: var(--accent); color: #fff; border-radius: 18px; text-align: center; padding: 16px; font-weight: 700; font-size: 17px; }
   .care-map { height: 170px; border-radius: 18px; background: #e8ece8; position: relative; overflow: hidden; margin-top: 12px; }
   .care-map svg { position: absolute; inset: 0; width: 100%; height: 100%; }
   .status-row { display: flex; justify-content: space-between; align-items: center; font-size: 13px; padding: 11px 0; border-bottom: 1px solid var(--line); }
@@ -299,8 +299,14 @@
   }
   @media (max-width: 520px) {
     .wrap { padding: 0 20px; }
-    .phone { width: 200px; height: 420px; }
-    .phone:nth-child(2) { display: none; }
+    /* full-size phone mockups in a horizontal swipe row */
+    .phones {
+      transform: none; justify-content: flex-start; overflow-x: auto; scroll-snap-type: x mandatory;
+      margin: 0 -20px; padding: 10px 20px 50px; scrollbar-width: none;
+    }
+    .phones::-webkit-scrollbar { display: none; }
+    .phone { flex: none; scroll-snap-align: center; }
+    .phone:nth-child(2) { margin-top: 0; }
     .stat .num { font-size: 58px; }
     .price-card { padding: 30px; }
     .nav-right .btn { display: none; }
@@ -505,7 +511,7 @@
             <div class="wearer-time">12h30</div>
             <div style="color:var(--ink-3);font-size:13px">Mardi, ensoleillé</div>
             <div class="wearer-msg">Bonjour Marguerite. C'est l'heure du déjeuner et de votre comprimé.</div>
-            <div class="wearer-card"><div class="pill-dot"></div><b style="font-size:14px">1 comprimé bleu</b><div style="font-size:12px;color:var(--ink-3)">Avec de l'eau, après le repas</div></div>
+            <div class="wearer-card"><div class="pill-dot"></div><div><b style="font-size:14px">1 comprimé bleu</b><div style="font-size:12px;color:var(--ink-3)">Avec de l'eau, après le repas</div></div></div>
             <div class="big-btn">C'est fait ✓</div>
           </div>
         </div>
@@ -515,7 +521,7 @@
           <div class="notch"></div>
           <div class="scr-pad">
             <div class="scr-label">Aidante · Sarah</div>
-            <div style="font-weight:700;font-size:18px;margin-top:8px">Maman est à la maison</div>
+            <div style="font-weight:700;font-size:16px;margin-top:8px">Maman est à la maison</div>
             <div class="care-map">
               <svg viewBox="0 0 220 170" preserveAspectRatio="xMidYMid slice">
                 <g stroke="#fff" stroke-width="8" fill="none"><path d="M-10 50H230M-10 125H230M60-10V180M160-10V180"/></g>
