@@ -1,0 +1,1036 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Memora — Lunettes intelligentes pour les personnes atteintes d'Alzheimer</title>
+<meta name="description" content="Memora sont des lunettes intelligentes qui reconnaissent les visages familiers, rappellent de manger et de prendre ses médicaments, et gardent la famille connectée grâce au GPS intégré.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Instrument+Serif:ital@0;1&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #f6f5f1;
+    --surface: #ffffff;
+    --ink: #14171a;
+    --ink-2: #4a5157;
+    --ink-3: #8a9095;
+    --line: #e4e2dc;
+    --accent: #2f7d6d;
+    --accent-soft: #e3efe9;
+    --radius: 22px;
+    --max: 1180px;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html { scroll-behavior: smooth; }
+  body {
+    background: var(--bg);
+    color: var(--ink);
+    font-family: Inter, system-ui, -apple-system, Segoe UI, Roboto, sans-serif;
+    font-size: 17px;
+    line-height: 1.6;
+    -webkit-font-smoothing: antialiased;
+    overflow-x: hidden;
+  }
+  a { color: inherit; text-decoration: none; }
+  img, svg { display: block; }
+  .serif { font-family: "Instrument Serif", Georgia, serif; font-weight: 400; }
+  .wrap { max-width: var(--max); margin: 0 auto; padding: 0 28px; }
+  .eyebrow {
+    font-size: 13px; letter-spacing: .14em; text-transform: uppercase;
+    color: var(--accent); font-weight: 600;
+  }
+  h1, h2, h3 { line-height: 1.08; letter-spacing: -.02em; }
+  h2 { font-size: clamp(36px, 5vw, 60px); }
+  h2 .serif, h1 .serif { font-style: italic; }
+
+  /* ---------- Buttons ---------- */
+  .btn {
+    display: inline-flex; align-items: center; gap: 10px;
+    padding: 14px 24px; border-radius: 999px; border: 1px solid transparent;
+    font: 600 15px/1 Inter, sans-serif; cursor: pointer;
+    transition: transform .2s ease, background .2s ease, box-shadow .2s ease;
+  }
+  .btn:hover { transform: translateY(-1px); }
+  .btn-dark { background: var(--ink); color: #fff; }
+  .btn-dark:hover { box-shadow: 0 10px 30px -10px rgba(0,0,0,.45); }
+  .btn-ghost { background: transparent; border-color: var(--line); color: var(--ink); }
+  .btn-ghost:hover { background: #fff; }
+  .btn-accent { background: var(--accent); color: #fff; }
+
+  /* ---------- Nav ---------- */
+  nav {
+    position: fixed; inset: 0 0 auto 0; z-index: 50;
+    transition: background .3s ease, border-color .3s ease;
+    border-bottom: 1px solid transparent;
+  }
+  nav.scrolled {
+    background: rgba(246,245,241,.82);
+    backdrop-filter: saturate(160%) blur(14px);
+    -webkit-backdrop-filter: saturate(160%) blur(14px);
+    border-color: var(--line);
+  }
+  .nav-inner { display: flex; align-items: center; justify-content: space-between; height: 72px; }
+  .logo { display: flex; align-items: center; gap: 10px; font-weight: 700; font-size: 19px; letter-spacing: -.01em; }
+  .logo-mark { width: 30px; height: 30px; border-radius: 50%; background: var(--ink); display: grid; place-items: center; }
+  .logo-mark span { width: 10px; height: 10px; border-radius: 50%; background: var(--accent); box-shadow: 0 0 0 3px rgba(47,125,109,.35); }
+  .nav-links { display: flex; gap: 34px; font-size: 15px; color: var(--ink-2); }
+  .nav-links a:hover { color: var(--ink); }
+  .nav-right { display: flex; align-items: center; gap: 14px; }
+  .cart {
+    position: relative; width: 44px; height: 44px; border-radius: 50%;
+    border: 1px solid var(--line); background: transparent; display: grid; place-items: center; cursor: pointer;
+  }
+  .cart-count {
+    position: absolute; top: -3px; right: -3px; min-width: 19px; height: 19px; padding: 0 5px;
+    border-radius: 999px; background: var(--accent); color: #fff; font-size: 11px; font-weight: 700;
+    display: none; place-items: center;
+  }
+  .cart-count.show { display: grid; }
+
+  /* ---------- 3D Showcase ---------- */
+  #showcase { position: relative; height: 520vh; }
+  .stage { position: sticky; top: 0; height: 100vh; overflow: hidden; }
+  .stage::before {
+    content: ""; position: absolute; inset: 0;
+    background:
+      radial-gradient(60% 55% at 62% 52%, #ffffff 0%, rgba(255,255,255,0) 70%),
+      radial-gradient(40% 40% at 20% 90%, rgba(47,125,109,.08), transparent 70%);
+  }
+  #gl { position: absolute; inset: 0; width: 100%; height: 100%; }
+  .panel {
+    position: absolute; z-index: 2; opacity: 0; pointer-events: none;
+    will-change: opacity, transform;
+  }
+  .panel.active { pointer-events: auto; }
+  .panel.left  { left: max(28px, calc((100vw - var(--max)) / 2 + 28px)); top: 50%; width: min(520px, 42vw); }
+  .panel.right { right: max(28px, calc((100vw - var(--max)) / 2 + 28px)); top: 50%; width: min(440px, 38vw); }
+  .panel.center { left: 50%; bottom: 9vh; width: min(720px, 90vw); text-align: center; }
+  .panel h1 { font-size: clamp(48px, 5.6vw, 80px); margin: 18px 0 22px; }
+  .panel h2 { font-size: clamp(36px, 4.4vw, 60px); margin: 14px 0 18px; }
+  .panel p { color: var(--ink-2); font-size: 18px; max-width: 440px; }
+  .panel.center p { margin: 0 auto; }
+  .panel .cta { display: flex; gap: 12px; margin-top: 32px; flex-wrap: wrap; }
+  .panel.center .cta { justify-content: center; }
+  .step-num { font-size: 14px; color: var(--ink-3); font-weight: 500; }
+
+  .swatches { display: flex; align-items: center; gap: 12px; margin-top: 38px; font-size: 14px; color: var(--ink-3); }
+  .swatch {
+    width: 26px; height: 26px; border-radius: 50%; border: 2px solid var(--bg); cursor: pointer;
+    box-shadow: 0 0 0 1px var(--line); transition: box-shadow .2s ease, transform .2s ease;
+  }
+  .swatch:hover { transform: scale(1.08); }
+  .swatch.on { box-shadow: 0 0 0 2px var(--ink); }
+  #swatchName { color: var(--ink); font-weight: 500; min-width: 70px; }
+
+  .chips { display: grid; gap: 10px; margin-top: 26px; max-width: 360px; }
+  .chip {
+    display: flex; gap: 12px; align-items: center; background: #fff; border: 1px solid var(--line);
+    border-radius: 16px; padding: 12px 16px; font-size: 15px; box-shadow: 0 8px 24px -16px rgba(0,0,0,.25);
+  }
+  .chip .ico { width: 34px; height: 34px; border-radius: 10px; display: grid; place-items: center; background: var(--accent-soft); color: var(--accent); flex: none; }
+  .chip small { display: block; color: var(--ink-3); font-size: 13px; }
+
+
+  .scroll-hint {
+    position: absolute; left: 50%; bottom: 28px; transform: translateX(-50%); z-index: 3;
+    font-size: 12px; letter-spacing: .14em; text-transform: uppercase; color: var(--ink-3);
+    display: flex; flex-direction: column; align-items: center; gap: 10px; transition: opacity .3s;
+  }
+  .scroll-hint i { width: 1px; height: 42px; background: linear-gradient(var(--ink-3), transparent); animation: drip 1.8s ease-in-out infinite; transform-origin: top; }
+  @keyframes drip { 0% { transform: scaleY(0); } 50% { transform: scaleY(1); } 100% { transform: scaleY(1); opacity: 0; } }
+
+  .progress { position: absolute; right: 28px; top: 50%; transform: translateY(-50%); z-index: 3; display: grid; gap: 10px; }
+  .progress span { width: 6px; height: 6px; border-radius: 50%; background: var(--line); transition: background .3s, transform .3s; }
+  .progress span.on { background: var(--ink); transform: scale(1.3); }
+
+  /* ---------- Sections ---------- */
+  section.block { padding: 140px 0; }
+  .section-head { max-width: 760px; margin-bottom: 64px; }
+  .section-head p { color: var(--ink-2); font-size: 19px; margin-top: 20px; max-width: 620px; }
+  .center-head { text-align: center; margin-left: auto; margin-right: auto; }
+  .center-head p { margin-left: auto; margin-right: auto; }
+
+  /* problem */
+  .problem { background: var(--ink); color: #fff; }
+  .problem .eyebrow { color: #7fc4b2; }
+  .problem .section-head p { color: #b5bbbf; }
+  .stats { display: grid; grid-template-columns: repeat(3, 1fr); gap: 1px; background: rgba(255,255,255,.12); border-radius: var(--radius); overflow: hidden; }
+  .stat { background: var(--ink); padding: 40px 34px; }
+  .stat .num { font-family: "Instrument Serif", serif; font-size: 72px; line-height: 1; }
+  .stat p { color: #b5bbbf; margin-top: 14px; font-size: 16px; }
+  .source { margin-top: 22px; font-size: 13px; color: #7d8489; }
+
+  /* features */
+  .features { display: grid; grid-template-columns: repeat(3, 1fr); gap: 20px; }
+  .feature {
+    background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius);
+    padding: 34px; transition: transform .3s ease, box-shadow .3s ease;
+  }
+  .feature:hover { transform: translateY(-4px); box-shadow: 0 30px 60px -40px rgba(0,0,0,.3); }
+  .feature .ico { width: 50px; height: 50px; border-radius: 14px; background: var(--accent-soft); color: var(--accent); display: grid; place-items: center; margin-bottom: 26px; }
+  .feature h3 { font-size: 21px; margin-bottom: 10px; letter-spacing: -.01em; }
+  .feature p { color: var(--ink-2); font-size: 16px; }
+  .feature.wide { grid-column: span 2; display: grid; grid-template-columns: 1fr 1fr; gap: 30px; align-items: center; }
+  .feature.span2 { grid-column: span 2; }
+  .safe-zone { position: relative; height: 200px; border-radius: 16px; background: #eef1ee; overflow: hidden; }
+  .safe-zone svg { position: absolute; inset: 0; width: 100%; height: 100%; }
+
+  /* how it works */
+  .steps { display: grid; grid-template-columns: repeat(3, 1fr); gap: 48px; counter-reset: s; }
+  .step { border-top: 1px solid var(--ink); padding-top: 26px; }
+  .step::before { counter-increment: s; content: "0" counter(s); font-family: "Instrument Serif", serif; font-size: 44px; line-height: 1; display: block; margin-bottom: 22px; }
+  .step h3 { font-size: 22px; margin-bottom: 10px; }
+  .step p { color: var(--ink-2); font-size: 16px; }
+
+  /* app */
+  .app { background: var(--surface); border-top: 1px solid var(--line); border-bottom: 1px solid var(--line); }
+  .app-grid { display: grid; grid-template-columns: 1fr 1.15fr; gap: 70px; align-items: center; }
+  .app-list { list-style: none; display: grid; gap: 18px; margin-top: 34px; }
+  .app-list li { display: flex; gap: 14px; color: var(--ink-2); }
+  .app-list li b { color: var(--ink); font-weight: 600; }
+  .tick { flex: none; width: 24px; height: 24px; border-radius: 50%; background: var(--accent-soft); color: var(--accent); display: grid; place-items: center; margin-top: 2px; }
+  .phones { display: flex; justify-content: center; gap: 26px; align-items: flex-start; }
+  .phone {
+    width: 250px; height: 520px; border-radius: 42px; background: #0f1113; padding: 10px;
+    box-shadow: 0 50px 80px -40px rgba(0,0,0,.5);
+  }
+  .phone:nth-child(2) { margin-top: 60px; }
+  .screen { width: 100%; height: 100%; border-radius: 33px; background: var(--bg); overflow: hidden; position: relative; display: flex; flex-direction: column; }
+  .notch { width: 80px; height: 22px; background: #0f1113; border-radius: 0 0 14px 14px; margin: 0 auto; flex: none; }
+  .scr-pad { padding: 18px 18px 20px; display: flex; flex-direction: column; flex: 1; }
+  .scr-label { font-size: 10px; letter-spacing: .14em; text-transform: uppercase; color: var(--ink-3); font-weight: 600; }
+  .wearer-time { font-family: "Instrument Serif", serif; font-size: 58px; line-height: 1; margin: 16px 0 6px; }
+  .wearer-msg { font-size: 19px; line-height: 1.3; font-weight: 600; margin-top: 14px; }
+  .wearer-card { background: #fff; border-radius: 20px; padding: 16px; margin-top: 18px; border: 1px solid var(--line); }
+  .pill-dot { width: 40px; height: 40px; border-radius: 50%; background: linear-gradient(135deg,#7aa7e0,#3e6fb3); margin-bottom: 10px; }
+  .big-btn { margin-top: auto; background: var(--accent); color: #fff; border-radius: 18px; text-align: center; padding: 16px; font-weight: 700; font-size: 17px; }
+  .care-map { height: 170px; border-radius: 18px; background: #e8ece8; position: relative; overflow: hidden; margin-top: 12px; }
+  .care-map svg { position: absolute; inset: 0; width: 100%; height: 100%; }
+  .status-row { display: flex; justify-content: space-between; align-items: center; font-size: 13px; padding: 11px 0; border-bottom: 1px solid var(--line); }
+  .status-row:last-child { border: 0; }
+  .ok { color: var(--accent); font-weight: 600; }
+  .pulse-dot { position: absolute; left: 52%; top: 46%; width: 14px; height: 14px; border-radius: 50%; background: var(--accent); border: 3px solid #fff; }
+  .pulse-dot::after { content: ""; position: absolute; inset: -10px; border-radius: 50%; border: 2px solid var(--accent); animation: ping 2s ease-out infinite; }
+  @keyframes ping { from { transform: scale(.4); opacity: 1; } to { transform: scale(1.6); opacity: 0; } }
+
+  /* privacy */
+  .privacy { display: grid; grid-template-columns: repeat(3, 1fr); gap: 20px; }
+  .privacy div { padding: 30px; border-radius: var(--radius); border: 1px solid var(--line); }
+  .privacy h3 { font-size: 19px; margin-bottom: 8px; }
+  .privacy p { color: var(--ink-2); font-size: 15px; }
+
+  /* pricing */
+  .pricing { display: grid; grid-template-columns: 1.2fr 1fr; gap: 20px; max-width: 980px; margin: 0 auto; }
+  .price-card { background: var(--surface); border: 1px solid var(--line); border-radius: 28px; padding: 42px; display: flex; flex-direction: column; }
+  .price-card.featured { background: var(--ink); color: #fff; border-color: var(--ink); }
+  .price-card.featured .muted, .price-card.featured li { color: #b5bbbf; }
+  .tag { align-self: flex-start; font-size: 12px; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; background: var(--accent); color: #fff; padding: 6px 12px; border-radius: 999px; margin-bottom: 22px; }
+  .price-card h3 { font-size: 26px; }
+  .price { font-family: "Instrument Serif", serif; font-size: 76px; line-height: 1; margin: 22px 0 6px; }
+  .price small { font-family: Inter, sans-serif; font-size: 16px; color: var(--ink-3); }
+  .muted { color: var(--ink-3); font-size: 15px; }
+  .price-card ul { list-style: none; margin: 28px 0 34px; display: grid; gap: 12px; }
+  .price-card li { display: flex; gap: 12px; color: var(--ink-2); font-size: 15px; }
+  .price-card li::before { content: ""; flex: none; width: 18px; height: 18px; margin-top: 3px; border-radius: 50%; background: var(--accent) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='white' stroke-width='3.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M5 12l5 5L20 7'/%3E%3C/svg%3E") center/11px no-repeat; }
+  .price-card .btn { margin-top: auto; justify-content: center; }
+  .featured .btn-dark { background: #fff; color: var(--ink); }
+  .pick { display: flex; gap: 10px; margin-top: 20px; align-items: center; }
+  .pick .swatch { border-color: var(--ink); box-shadow: 0 0 0 1px #444; }
+  .pick .swatch.on { box-shadow: 0 0 0 2px #fff; }
+  .guarantee { text-align: center; color: var(--ink-3); font-size: 14px; margin-top: 30px; }
+
+  /* faq */
+  .faq { max-width: 800px; margin: 0 auto; }
+  .faq details { border-bottom: 1px solid var(--line); padding: 24px 0; }
+  .faq summary { cursor: pointer; list-style: none; font-size: 19px; font-weight: 600; display: flex; justify-content: space-between; gap: 20px; }
+  .faq summary::-webkit-details-marker { display: none; }
+  .faq summary::after { content: "+"; font-weight: 400; font-size: 26px; line-height: 1; color: var(--ink-3); transition: transform .25s; }
+  .faq details[open] summary::after { transform: rotate(45deg); }
+  .faq details p { color: var(--ink-2); margin-top: 14px; max-width: 680px; }
+
+  /* footer */
+  .cta-band { text-align: center; padding: 140px 0; }
+  .cta-band h2 { max-width: 820px; margin: 0 auto 34px; }
+  footer { border-top: 1px solid var(--line); padding: 48px 0; font-size: 14px; color: var(--ink-3); }
+  .foot { display: flex; justify-content: space-between; gap: 30px; flex-wrap: wrap; align-items: center; }
+  .foot-links { display: flex; gap: 26px; }
+  .disclaimer { margin-top: 24px; font-size: 12px; max-width: 760px; }
+
+  /* toast */
+  .toast {
+    position: fixed; left: 50%; bottom: 30px; transform: translate(-50%, calc(100% + 60px)); z-index: 60;
+    background: var(--ink); color: #fff; padding: 14px 22px; border-radius: 999px; font-size: 15px;
+    display: flex; gap: 10px; align-items: center; transition: transform .45s cubic-bezier(.2,.9,.3,1.2);
+    box-shadow: 0 20px 40px -20px rgba(0,0,0,.5);
+  }
+  .toast.show { transform: translate(-50%, 0); }
+
+  /* reveal */
+  .reveal { opacity: 0; transform: translateY(26px); transition: opacity .8s ease, transform .8s cubic-bezier(.2,.7,.2,1); }
+  .reveal.in { opacity: 1; transform: none; }
+
+  /* ---------- Responsive ---------- */
+  @media (max-width: 960px) {
+    .nav-links { display: none; }
+    .features, .privacy, .steps, .stats { grid-template-columns: 1fr; }
+    .feature.wide { grid-column: auto; grid-template-columns: 1fr; }
+    .feature.span2 { grid-column: auto; }
+    .app-grid, .pricing { grid-template-columns: 1fr; }
+    .phones { transform: scale(.9); }
+    section.block { padding: 100px 0; }
+  }
+  @media (max-width: 820px) {
+    .panel.left, .panel.right {
+      left: 20px; right: 20px; width: auto; top: auto; bottom: 8vh;
+    }
+    .panel h1 { font-size: 44px; }
+    .panel h2 { font-size: 34px; }
+    .panel p { font-size: 16px; }
+    .chips { display: none; }
+    .progress { right: 12px; }
+    .scroll-hint { display: none; }
+  }
+  @media (max-width: 520px) {
+    .wrap { padding: 0 20px; }
+    .phone { width: 200px; height: 420px; }
+    .phone:nth-child(2) { display: none; }
+    .stat .num { font-size: 58px; }
+    .price-card { padding: 30px; }
+    .nav-right .btn { display: none; }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    html { scroll-behavior: auto; }
+    .reveal { opacity: 1; transform: none; transition: none; }
+  }
+</style>
+</head>
+<body>
+
+<!-- ============ NAV ============ -->
+<nav id="nav">
+  <div class="wrap nav-inner">
+    <a href="#top" class="logo"><span class="logo-mark"><span></span></span>Memora</a>
+    <div class="nav-links">
+      <a href="#problem">Pourquoi Memora</a>
+      <a href="#features">Fonctionnalités</a>
+      <a href="#app">Application</a>
+      <a href="#pricing">Tarifs</a>
+      <a href="#faq">FAQ</a>
+    </div>
+    <div class="nav-right">
+      <button class="cart" aria-label="Panier" id="cartBtn">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M6 7h12l-1 13H7L6 7z"/><path d="M9 7a3 3 0 0 1 6 0"/></svg>
+        <span class="cart-count" id="cartCount">0</span>
+      </button>
+      <a href="#pricing" class="btn btn-dark">Acheter</a>
+    </div>
+  </div>
+</nav>
+
+<!-- ============ 3D SHOWCASE ============ -->
+<section id="showcase">
+  <div class="stage" id="top">
+    <canvas id="gl"></canvas>
+
+    <div class="panel left" data-in="0" data-out="0.15">
+      <div class="eyebrow">Lunettes intelligentes contre Alzheimer</div>
+      <h1>Reconnaître <span class="serif">les visages</span> qu'on aime.</h1>
+      <p>Memora sont des lunettes du quotidien qui reconnaissent discrètement vos proches, vous rappellent de manger et de prendre vos médicaments, et gardent votre famille près de vous — où que vous alliez.</p>
+      <div class="cta">
+        <a href="#pricing" class="btn btn-dark">Commander Memora — 349 €</a>
+        <a href="#features" class="btn btn-ghost">Découvrir</a>
+      </div>
+      <div class="swatches" id="heroSwatches">
+        <button class="swatch on" data-color="onyx" style="background:#16181a" aria-label="Onyx"></button>
+        <button class="swatch" data-color="tortoise" style="background:linear-gradient(135deg,#7a4a26,#3a2212)" aria-label="Écaille"></button>
+        <button class="swatch" data-color="sage" style="background:#7f9483" aria-label="Sauge"></button>
+        <button class="swatch" data-color="pearl" style="background:#ebe6dc" aria-label="Perle"></button>
+        <span id="swatchName">Onyx</span>
+      </div>
+    </div>
+
+    <div class="panel left" data-in="0.2" data-out="0.4">
+      <div class="step-num">01 / 03</div>
+      <h2>Un prénom familier, <span class="serif">murmuré</span> doucement.</h2>
+      <p>Une minuscule caméra cachée dans la monture reconnaît les personnes ajoutées dans l'application. Quand un proche s'approche, son nom apparaît directement dans le verre et une voix douce vous dit qui c'est — « Voici Sarah, votre fille. »</p>
+    </div>
+
+    <div class="panel right" data-in="0.45" data-out="0.63">
+      <div class="step-num">02 / 03</div>
+      <h2>Repas, médicaments, <span class="serif">jamais</span> oubliés.</h2>
+      <p>Un haut-parleur discret et une légère vibration dans la branche vous rappellent l'heure du repas ou des médicaments — uniquement si ce n'est pas déjà fait.</p>
+      <div class="chips">
+        <div class="chip"><span class="ico"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M4 3v8a3 3 0 0 0 6 0V3M7 3v18M17 3c-2 2-3 5-3 8h3v10"/></svg></span><div>C'est l'heure du déjeuner<small>12h30 · La soupe est dans le réfrigérateur</small></div></div>
+        <div class="chip"><span class="ico"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="9" width="18" height="6" rx="3" transform="rotate(-45 12 12)"/><path d="M9.5 9.5l5 5"/></svg></span><div>Prenez votre comprimé bleu<small>20h00 · Avec un verre d'eau</small></div></div>
+      </div>
+    </div>
+
+    <div class="panel left" data-in="0.68" data-out="0.85">
+      <div class="step-num">03 / 03</div>
+      <h2>Jamais oubliées, <span class="serif">jamais</span> perdu.</h2>
+      <p>Vous oubliez de les mettre ? Un doux carillon retentit jusqu'à ce que vous les portiez. Le GPS intégré partage votre position avec la famille et l'alerte si vous sortez d'une zone de sécurité.</p>
+    </div>
+
+    <div class="panel center" data-in="0.9" data-out="1.01">
+      <h2>L'allure de lunettes. <span class="serif">La présence d'une famille.</span></h2>
+      <div class="cta">
+        <a href="#pricing" class="btn btn-dark">Commander</a>
+        <a href="#problem" class="btn btn-ghost">En savoir plus</a>
+      </div>
+    </div>
+
+    <div class="progress" id="progress"><span></span><span></span><span></span><span></span><span></span></div>
+    <div class="scroll-hint" id="scrollHint">Défiler<i></i></div>
+  </div>
+</section>
+
+<!-- ============ PROBLEM ============ -->
+<section class="block problem" id="problem">
+  <div class="wrap">
+    <div class="section-head reveal">
+      <div class="eyebrow">Le problème</div>
+      <h2 style="margin-top:16px">La mémoire s'efface. <span class="serif">La dignité, jamais.</span></h2>
+      <p>Pour les personnes atteintes d'Alzheimer, les gestes du quotidien deviennent incertains : ne plus reconnaître un petit-enfant, sauter un repas, oublier un médicament ou ne plus retrouver le chemin de la maison. Pour les familles, c'est une inquiétude permanente.</p>
+    </div>
+    <div class="stats reveal">
+      <div class="stat"><div class="num">55 M+</div><p>de personnes vivent avec une démence dans le monde, et la maladie d'Alzheimer représente 60 à 70 % des cas.</p></div>
+      <div class="stat"><div class="num">6 sur 10</div><p>personnes atteintes de démence se perdront au moins une fois — souvent sans prévenir.</p></div>
+      <div class="stat"><div class="num">1 sur 2</div><p>patients sous traitement au long cours ne le prend pas comme prescrit. Les troubles de la mémoire aggravent ce risque.</p></div>
+    </div>
+    <p class="source reveal">Sources : Organisation mondiale de la Santé ; Alzheimer's Association ; rapport de l'OMS sur l'observance des traitements au long cours.</p>
+  </div>
+</section>
+
+<!-- ============ FEATURES ============ -->
+<section class="block" id="features">
+  <div class="wrap">
+    <div class="section-head reveal">
+      <div class="eyebrow">Fonctionnalités</div>
+      <h2 style="margin-top:16px">Tout l'essentiel. <span class="serif">Rien de superflu.</span></h2>
+      <p>Pas d'écran, pas de bouton à apprendre. Memora fonctionne toute seule — il suffit de les porter.</p>
+    </div>
+    <div class="features">
+      <div class="feature reveal">
+        <div class="ico"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M3 8V5a2 2 0 0 1 2-2h3M16 3h3a2 2 0 0 1 2 2v3M21 16v3a2 2 0 0 1-2 2h-3M8 21H5a2 2 0 0 1-2-2v-3"/><circle cx="12" cy="10" r="3"/><path d="M7 17c1-2 3-3 5-3s4 1 5 3"/></svg></div>
+        <h3>Reconnaissance faciale</h3>
+        <p>Reconnaît la famille, les amis et les soignants enregistrés, puis annonce leur prénom et leur lien d'une voix calme.</p>
+      </div>
+      <div class="feature reveal">
+        <div class="ico"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><circle cx="12" cy="13" r="8"/><path d="M12 9v4l2.5 2.5M5 3 2 6M19 3l3 3"/></svg></div>
+        <h3>Rappels repas & médicaments</h3>
+        <p>Des rappels intelligents qui s'adaptent : si la prise est confirmée, Memora reste silencieuse. Sinon, elle insiste avec douceur.</p>
+      </div>
+      <div class="feature reveal">
+        <div class="ico"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9M10.3 21a1.94 1.94 0 0 0 3.4 0"/></svg></div>
+        <h3>Alarme anti-oubli</h3>
+        <p>Des capteurs dans les plaquettes détectent quand Memora n'est pas portée. Un doux carillon — et une notification à la famille — pour qu'elles ne restent jamais sur la table.</p>
+      </div>
+      <div class="feature wide reveal">
+        <div>
+          <div class="ico"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M12 22s7-6.3 7-12a7 7 0 0 0-14 0c0 5.7 7 12 7 12z"/><circle cx="12" cy="10" r="2.5"/></svg></div>
+          <h3>GPS intégré & zones de sécurité</h3>
+          <p>Localisation en temps réel, partagée uniquement avec les personnes de votre choix. Dessinez une zone de sécurité autour de la maison, du parc ou de la boulangerie — si le porteur en sort, la famille est alertée immédiatement et Memora peut le guider pas à pas pour rentrer.</p>
+        </div>
+        <div class="safe-zone">
+          <svg viewBox="0 0 400 200" preserveAspectRatio="xMidYMid slice">
+            <g stroke="#fff" stroke-width="10" fill="none"><path d="M-10 60H410M-10 150H410M90-10V210M260-10V210"/></g>
+            <g stroke="#fff" stroke-width="4" fill="none" opacity=".8"><path d="M-10 105H410M180-10V210M340-10V210"/></g>
+            <circle cx="180" cy="105" r="78" fill="rgba(47,125,109,.14)" stroke="#2f7d6d" stroke-width="2" stroke-dasharray="6 6"/>
+            <path d="M180 105 L210 85 L232 70" stroke="#2f7d6d" stroke-width="3" fill="none" stroke-linecap="round" stroke-dasharray="1 7"/>
+            <circle cx="180" cy="105" r="8" fill="#14171a"/><circle cx="232" cy="70" r="8" fill="#2f7d6d" stroke="#fff" stroke-width="3"/>
+          </svg>
+        </div>
+      </div>
+      <div class="feature reveal">
+        <div class="ico"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><rect x="6" y="2" width="12" height="20" rx="3"/><path d="M11 18h2"/></svg></div>
+        <h3>Deux applis, une famille</h3>
+        <p>Une application simple pour le porteur et un tableau de bord complet pour le proche aidant, reliés entre eux.</p>
+      </div>
+      <div class="feature reveal">
+        <div class="ico"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/></svg></div>
+        <h3>De vraies lunettes, confortables</h3>
+        <p>Verres clairs antireflet, monture légère, autonomie d'une journée et chargeur magnétique facile à utiliser. Verres correcteurs disponibles.</p>
+      </div>
+      <div class="feature span2 reveal">
+        <div class="ico"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M3 12h4l3-8 4 16 3-8h4"/></svg></div>
+        <h3>Suivi au quotidien</h3>
+        <p>Repas, médicaments, sorties et visites en un coup d'œil — des informations utiles à partager avec les médecins et les soignants.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ============ HOW IT WORKS ============ -->
+<section class="block" style="padding-top:40px">
+  <div class="wrap">
+    <div class="section-head reveal">
+      <div class="eyebrow">Comment ça marche</div>
+      <h2 style="margin-top:16px">Une seule configuration. <span class="serif">Du soin chaque jour.</span></h2>
+    </div>
+    <div class="steps">
+      <div class="step reveal"><h3>La famille configure</h3><p>Dans l'application aidant, ajoutez les photos des proches, le planning des médicaments, les heures de repas et les zones de sécurité. Environ 15 minutes suffisent.</p></div>
+      <div class="step reveal"><h3>Le porteur n'a qu'à les mettre</h3><p>Memora reconnaît les visages, énonce les rappels et suit discrètement la position — sans bouton, sans écran, sans apprentissage.</p></div>
+      <div class="step reveal"><h3>Tout le monde reste connecté</h3><p>Le proche aidant reçoit des nouvelles et des alertes en direct — lunettes retirées, médicament oublié ou sortie d'une zone de sécurité.</p></div>
+    </div>
+  </div>
+</section>
+
+<!-- ============ APP ============ -->
+<section class="block app" id="app">
+  <div class="wrap app-grid">
+    <div class="reveal">
+      <div class="eyebrow">L'application Memora</div>
+      <h2 style="margin-top:16px">Une appli <span class="serif">pour vous deux.</span></h2>
+      <p style="color:var(--ink-2);font-size:19px;margin-top:20px">Installée sur le téléphone du porteur et sur celui de l'aidant, l'application Memora s'adapte à chacun.</p>
+      <ul class="app-list">
+        <li><span class="tick"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.5"><path d="M5 12l5 5L20 7"/></svg></span><span><b>Mode porteur</b> — grands caractères, un seul gros bouton et une voix apaisante. Juste la journée à venir et les visites prévues.</span></li>
+        <li><span class="tick"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.5"><path d="M5 12l5 5L20 7"/></svg></span><span><b>Mode aidant</b> — carte en direct, rappels, bibliothèque de visages, niveau de batterie et historique d'activité.</span></li>
+        <li><span class="tick"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.5"><path d="M5 12l5 5L20 7"/></svg></span><span><b>Alertes instantanées</b> — lunettes non portées, médicament oublié ou sortie de zone. Partage avec jusqu'à 5 membres de la famille.</span></li>
+        <li><span class="tick"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.5"><path d="M5 12l5 5L20 7"/></svg></span><span><b>iOS & Android</b> — gratuite avec chaque paire de Memora.</span></li>
+      </ul>
+    </div>
+    <div class="phones reveal">
+      <div class="phone">
+        <div class="screen">
+          <div class="notch"></div>
+          <div class="scr-pad">
+            <div class="scr-label">Porteuse · Marguerite</div>
+            <div class="wearer-time">12h30</div>
+            <div style="color:var(--ink-3);font-size:13px">Mardi, ensoleillé</div>
+            <div class="wearer-msg">Bonjour Marguerite. C'est l'heure du déjeuner et de votre comprimé.</div>
+            <div class="wearer-card"><div class="pill-dot"></div><b style="font-size:14px">1 comprimé bleu</b><div style="font-size:12px;color:var(--ink-3)">Avec de l'eau, après le repas</div></div>
+            <div class="big-btn">C'est fait ✓</div>
+          </div>
+        </div>
+      </div>
+      <div class="phone">
+        <div class="screen">
+          <div class="notch"></div>
+          <div class="scr-pad">
+            <div class="scr-label">Aidante · Sarah</div>
+            <div style="font-weight:700;font-size:18px;margin-top:8px">Maman est à la maison</div>
+            <div class="care-map">
+              <svg viewBox="0 0 220 170" preserveAspectRatio="xMidYMid slice">
+                <g stroke="#fff" stroke-width="8" fill="none"><path d="M-10 50H230M-10 125H230M60-10V180M160-10V180"/></g>
+                <circle cx="115" cy="80" r="56" fill="rgba(47,125,109,.12)" stroke="#2f7d6d" stroke-width="1.5" stroke-dasharray="4 4"/>
+              </svg>
+              <div class="pulse-dot"></div>
+            </div>
+            <div style="margin-top:12px">
+              <div class="status-row"><span>Lunettes portées</span><span class="ok">Oui</span></div>
+              <div class="status-row"><span>Comprimé du matin</span><span class="ok">08h02</span></div>
+              <div class="status-row"><span>Déjeuner</span><span style="color:var(--ink-3)">Rappelé</span></div>
+              <div class="status-row"><span>Batterie</span><span>78 %</span></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ============ PRIVACY ============ -->
+<section class="block">
+  <div class="wrap">
+    <div class="section-head reveal">
+      <div class="eyebrow">Respect de la vie privée</div>
+      <h2 style="margin-top:16px">Bienveillante <span class="serif">et</span> respectueuse.</h2>
+    </div>
+    <div class="privacy">
+      <div class="reveal"><h3>Reconnaissance locale</h3><p>Les visages sont reconnus directement dans les lunettes. Aucune vidéo n'est enregistrée ni envoyée — seul le prénom est prononcé.</p></div>
+      <div class="reveal"><h3>Position chiffrée</h3><p>La localisation est chiffrée de bout en bout et visible uniquement par les membres de la famille invités.</p></div>
+      <div class="reveal"><h3>Le consentement d'abord</h3><p>Seules les personnes ajoutées à la bibliothèque sont reconnues. Les inconnus sont tout simplement ignorés.</p></div>
+    </div>
+  </div>
+</section>
+
+<!-- ============ PRICING ============ -->
+<section class="block" id="pricing" style="padding-top:40px">
+  <div class="wrap">
+    <div class="section-head center-head reveal">
+      <div class="eyebrow">Tarifs</div>
+      <h2 style="margin-top:16px">La sérénité, <span class="serif">à prix simple.</span></h2>
+      <p>Livraison offerte, essai de 60 jours à domicile et garantie de 2 ans sur chaque paire.</p>
+    </div>
+    <div class="pricing">
+      <div class="price-card featured reveal">
+        <span class="tag">Le plus choisi</span>
+        <h3>Memora + Famille</h3>
+        <div class="price">349 € <small style="color:#9aa1a6">+ 9 €/mois</small></div>
+        <div class="muted">Les lunettes + toutes les fonctions aidant</div>
+        <ul>
+          <li>Lunettes intelligentes Memora</li>
+          <li>Bibliothèque de visages illimitée</li>
+          <li>GPS en direct, zones de sécurité & alertes</li>
+          <li>Jusqu'à 5 membres de la famille</li>
+          <li>Historique d'activité & rapports pour le médecin</li>
+        </ul>
+        <div class="pick" id="buySwatches">
+          <button class="swatch on" data-color="onyx" style="background:#16181a" aria-label="Onyx"></button>
+          <button class="swatch" data-color="tortoise" style="background:linear-gradient(135deg,#7a4a26,#3a2212)" aria-label="Écaille"></button>
+          <button class="swatch" data-color="sage" style="background:#7f9483" aria-label="Sauge"></button>
+          <button class="swatch" data-color="pearl" style="background:#ebe6dc" aria-label="Perle"></button>
+          <span class="muted" id="buyColor" style="margin-left:6px">Onyx</span>
+        </div>
+        <button class="btn btn-dark add" data-item="Memora + Famille" style="margin-top:28px">Ajouter au panier</button>
+      </div>
+      <div class="price-card reveal">
+        <h3>Memora Essentiel</h3>
+        <div class="price">399 €</div>
+        <div class="muted">Achat unique, sans abonnement</div>
+        <ul>
+          <li>Lunettes intelligentes Memora</li>
+          <li>Jusqu'à 10 visages</li>
+          <li>Rappels repas & médicaments</li>
+          <li>Alarme anti-oubli</li>
+          <li>Localisation à la demande, 1 membre de la famille</li>
+        </ul>
+        <button class="btn btn-ghost add" data-item="Memora Essentiel">Ajouter au panier</button>
+      </div>
+    </div>
+    <p class="guarantee reveal">Verres correcteurs +89 € · Paiement en 4 fois sans frais · Retours gratuits</p>
+  </div>
+</section>
+
+<!-- ============ FAQ ============ -->
+<section class="block" id="faq" style="padding-top:40px">
+  <div class="wrap">
+    <div class="section-head center-head reveal">
+      <div class="eyebrow">FAQ</div>
+      <h2 style="margin-top:16px">Vos questions, <span class="serif">nos réponses.</span></h2>
+    </div>
+    <div class="faq reveal">
+      <details open><summary>Le porteur doit-il utiliser un smartphone ?</summary><p>Non. Une fois configurée, Memora fonctionne toute seule. L'application du porteur est facultative — elle affiche simplement le programme de la journée en grands caractères. Le proche aidant gère tout depuis son propre téléphone.</p></details>
+      <details><summary>Comment fonctionne l'alarme anti-oubli ?</summary><p>Des capteurs dans les plaquettes détectent si les lunettes sont sur le visage. Si elles ne sont pas portées après un délai que vous choisissez (par exemple 15 minutes après le réveil), Memora émet un doux carillon et prévient l'application aidant.</p></details>
+      <details><summary>Quelle est l'autonomie de la batterie ?</summary><p>Une journée complète d'utilisation normale. La recharge se fait avec un câble magnétique qui se fixe tout seul — pas de petit connecteur à manipuler.</p></details>
+      <details><summary>Et si le porteur se perd ?</summary><p>S'il quitte une zone de sécurité, la famille reçoit immédiatement une alerte avec sa position en direct. Memora peut aussi le guider vocalement, calmement, étape par étape jusqu'à la maison.</p></details>
+      <details><summary>Puis-je avoir des verres correcteurs ?</summary><p>Oui. Envoyez votre ordonnance lors de la commande et nous les montons sur votre monture Memora. Des verres solaires teintés sont aussi disponibles en option.</p></details>
+      <details><summary>Memora est-il un dispositif médical ?</summary><p>Memora est une aide technique conçue pour faciliter le quotidien. Elle ne diagnostique ni ne traite la maladie d'Alzheimer et ne remplace pas un suivi médical.</p></details>
+    </div>
+  </div>
+</section>
+
+<!-- ============ CTA + FOOTER ============ -->
+<section class="cta-band">
+  <div class="wrap reveal">
+    <h2>Rendez-leur <span class="serif">confiance</span> — et offrez-vous la sérénité.</h2>
+    <a href="#pricing" class="btn btn-dark">Commander Memora</a>
+  </div>
+</section>
+
+<footer>
+  <div class="wrap">
+    <div class="foot">
+      <a href="#top" class="logo"><span class="logo-mark"><span></span></span>Memora</a>
+      <div class="foot-links"><a href="#features">Fonctionnalités</a><a href="#app">Application</a><a href="#pricing">Tarifs</a><a href="#faq">Aide</a></div>
+      <div>© 2026 Memora</div>
+    </div>
+    <p class="disclaimer">Memora est un concept d'aide technique. Il n'est pas destiné à diagnostiquer, traiter ou guérir une maladie. Suivez toujours l'avis des professionnels de santé.</p>
+  </div>
+</footer>
+
+<div class="toast" id="toast"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#7fc4b2" stroke-width="3"><path d="M5 12l5 5L20 7"/></svg><span id="toastText">Ajouté au panier</span></div>
+
+<!-- ============ SCRIPTS ============ -->
+<script type="importmap">
+{ "imports": {
+  "three": "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js",
+  "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/"
+} }
+</script>
+
+<script type="module">
+import * as THREE from 'three';
+import { RoomEnvironment } from 'three/addons/environments/RoomEnvironment.js';
+import { RoundedBoxGeometry } from 'three/addons/geometries/RoundedBoxGeometry.js';
+
+/* ---------------- Renderer & scene ---------------- */
+const canvas = document.getElementById('gl');
+const renderer = new THREE.WebGLRenderer({ canvas, antialias: true, alpha: true });
+renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+renderer.toneMapping = THREE.ACESFilmicToneMapping;
+renderer.toneMappingExposure = 1.05;
+renderer.outputColorSpace = THREE.SRGBColorSpace;
+
+const scene = new THREE.Scene();
+const pmrem = new THREE.PMREMGenerator(renderer);
+scene.environment = pmrem.fromScene(new RoomEnvironment(), 0.04).texture;
+
+const camera = new THREE.PerspectiveCamera(30, 1, 0.1, 100);
+camera.position.set(0, 0, 7);
+
+const key = new THREE.DirectionalLight(0xffffff, 1.6);
+key.position.set(3, 4, 5);
+scene.add(key);
+const rim = new THREE.DirectionalLight(0xbfe6db, 1.2);
+rim.position.set(-4, 2, -4);
+scene.add(rim);
+
+/* ---------------- Materials ---------------- */
+const COLORS = {
+  onyx:     { c: 0x141618, rough: 0.28, name: 'Onyx' },
+  tortoise: { c: 0x4a2c16, rough: 0.22, name: 'Écaille' },
+  sage:     { c: 0x6f8574, rough: 0.35, name: 'Sauge' },
+  pearl:    { c: 0xe6e0d4, rough: 0.30, name: 'Perle' },
+};
+const frameMat = new THREE.MeshPhysicalMaterial({
+  color: COLORS.onyx.c, roughness: 0.28, metalness: 0.0, clearcoat: 1, clearcoatRoughness: 0.12,
+});
+// clear prescription-style lenses: mostly transparent, with soft reflections from the environment
+const lensMat = new THREE.MeshPhysicalMaterial({
+  color: 0xeef6f4, roughness: 0.0, metalness: 0.0, transparent: true, opacity: 0.16,
+  envMapIntensity: 1.6, clearcoat: 1, clearcoatRoughness: 0, depthWrite: false, side: THREE.DoubleSide,
+});
+const metalMat = new THREE.MeshStandardMaterial({ color: 0xb9bcbf, metalness: 1, roughness: 0.25 });
+const darkGlass = new THREE.MeshPhysicalMaterial({ color: 0x050607, roughness: 0.05, metalness: 0.5, clearcoat: 1 });
+const glowMat = new THREE.MeshStandardMaterial({ color: 0x2f7d6d, emissive: 0x3fbf9f, emissiveIntensity: 2 });
+const padMat = new THREE.MeshPhysicalMaterial({ color: 0xffffff, roughness: 0.2, transmission: 0.6, transparent: true, opacity: 0.7 });
+
+/* ---------------- Build the glasses ---------------- */
+const glasses = new THREE.Group();
+const A = 0.5, B = 0.37;           // lens half-width / half-height
+const CX = 0.66;                   // lens center offset from the middle
+
+// Squircle lens outline, tapered at the bottom and lifted at the outer top corner (wayfarer feel)
+// heads-up display drawn on the lens during the face-recognition step
+const hudCanvas = document.createElement('canvas');
+hudCanvas.width = 1024; hudCanvas.height = 680;
+const hudTex = new THREE.CanvasTexture(hudCanvas);
+hudTex.colorSpace = THREE.SRGBColorSpace;
+hudTex.anisotropy = 8;
+const hudMat = new THREE.MeshBasicMaterial({
+  map: hudTex, transparent: true, opacity: 0, depthWrite: false, toneMapped: false, side: THREE.DoubleSide,
+});
+const hud = new THREE.Mesh(new THREE.PlaneGeometry(0.86, 0.571), hudMat);
+hud.position.set(0, -0.01, 0.012);
+hud.renderOrder = 2;
+
+function drawHud() {
+  const g = hudCanvas.getContext('2d');
+  const W = hudCanvas.width, H = hudCanvas.height;
+  g.clearRect(0, 0, W, H);
+  const round = (x, y, w, h, r) => { g.beginPath(); g.roundRect(x, y, w, h, r); };
+
+  // card
+  round(40, 150, W - 80, 380, 60);
+  g.fillStyle = 'rgba(14, 36, 31, 0.78)';
+  g.fill();
+  g.lineWidth = 4;
+  g.strokeStyle = 'rgba(127, 214, 190, 0.7)';
+  g.stroke();
+
+  // avatar with scan brackets
+  const ax = 100, ay = 210, as = 260;
+  round(ax, ay, as, as, 44);
+  const grad = g.createLinearGradient(ax, ay, ax + as, ay + as);
+  grad.addColorStop(0, '#d9c2a8'); grad.addColorStop(1, '#b48a68');
+  g.fillStyle = grad; g.fill();
+  g.save(); g.clip();
+  g.fillStyle = '#f3dfce';
+  g.beginPath(); g.arc(ax + as / 2, ay + 100, 56, 0, Math.PI * 2); g.fill();
+  g.beginPath(); g.ellipse(ax + as / 2, ay + as + 10, 110, 100, 0, Math.PI, 0); g.fill();
+  g.restore();
+  g.strokeStyle = '#7fd6be'; g.lineWidth = 8; g.lineCap = 'round';
+  const b = 44, o = 16;
+  for (const [cx, cy, sx, sy] of [[ax - o, ay - o, 1, 1], [ax + as + o, ay - o, -1, 1], [ax - o, ay + as + o, 1, -1], [ax + as + o, ay + as + o, -1, -1]]) {
+    g.beginPath(); g.moveTo(cx, cy + sy * b); g.lineTo(cx, cy); g.lineTo(cx + sx * b, cy); g.stroke();
+  }
+
+  // text
+  const tx = 410;
+  g.fillStyle = '#7fd6be';
+  g.beginPath(); g.arc(tx + 12, 262, 12, 0, Math.PI * 2); g.fill();
+  g.font = '600 40px Inter, sans-serif';
+  g.fillText('RECONNUE', tx + 40, 276);
+  g.fillStyle = '#ffffff';
+  g.font = '700 110px Inter, sans-serif';
+  g.fillText('Sarah', tx - 4, 395);
+  g.fillStyle = 'rgba(255,255,255,0.75)';
+  g.font = '500 50px Inter, sans-serif';
+  g.fillText('Votre fille', tx, 465);
+  hudTex.needsUpdate = true;
+}
+drawHud();
+document.fonts.ready.then(drawHud);
+
+function lensPoint(a, b, dir, t) {
+  const n = 3.4;
+  const c = Math.cos(t), s = Math.sin(t);
+  let x = a * Math.sign(c) * Math.pow(Math.abs(c), 2 / n);
+  let y = b * Math.sign(s) * Math.pow(Math.abs(s), 2 / n);
+  if (y < 0) x *= 1 - 0.16 * (-y / b);
+  if (y > 0) y += 0.06 * (dir * x / a + 0.3) * (y / b);
+  return new THREE.Vector2(x, y);
+}
+function lensPoints(a, b, dir, seg = 120) {
+  const pts = [];
+  for (let i = 0; i < seg; i++) pts.push(lensPoint(a, b, dir, (i / seg) * Math.PI * 2));
+  return pts;
+}
+// middle of the rim band at angle t, used to sit parts flush inside the frame
+function rimPoint(dir, t) {
+  return lensPoint(A, B, dir, t).add(lensPoint(A + 0.075, B + 0.07, dir, t)).multiplyScalar(0.5);
+}
+
+for (const dir of [-1, 1]) {
+  const half = new THREE.Group();
+  half.position.x = dir * CX;
+  half.rotation.y = dir * 0.09;
+
+  const rimShape = new THREE.Shape(lensPoints(A + 0.075, B + 0.07, dir));
+  rimShape.holes.push(new THREE.Path(lensPoints(A, B, dir)));
+  const rimGeo = new THREE.ExtrudeGeometry(rimShape, {
+    depth: 0.07, bevelEnabled: true, bevelThickness: 0.02, bevelSize: 0.016, bevelSegments: 5, curveSegments: 1,
+  });
+  rimGeo.translate(0, 0, -0.035);
+  half.add(new THREE.Mesh(rimGeo, frameMat));
+
+  const lens = new THREE.Mesh(new THREE.ShapeGeometry(new THREE.Shape(lensPoints(A + 0.012, B + 0.012, dir))), lensMat);
+  lens.position.z = 0.005;
+  half.add(lens);
+  if (dir === -1) half.add(hud);
+
+  // top-outer corner of the rim: the camera on one side, a privacy LED on the other
+  const corner = rimPoint(dir, dir === -1 ? Math.PI - 0.5 : 0.5);
+  if (dir === -1) {
+    const camLens = new THREE.Mesh(new THREE.CylinderGeometry(0.019, 0.019, 0.02, 32), darkGlass);
+    camLens.rotation.x = Math.PI / 2;
+    camLens.position.set(corner.x, corner.y, 0.05);
+    half.add(camLens);
+    const camRing = new THREE.Mesh(new THREE.TorusGeometry(0.024, 0.004, 12, 48), glowMat);
+    camRing.position.set(corner.x, corner.y, 0.058);
+    half.add(camRing);
+  } else {
+    const led = new THREE.Mesh(new THREE.CylinderGeometry(0.008, 0.008, 0.02, 16), glowMat);
+    led.rotation.x = Math.PI / 2;
+    led.position.set(corner.x, corner.y, 0.05);
+    half.add(led);
+  }
+
+  // nose pad (with wear sensor)
+  const pad = new THREE.Mesh(new THREE.SphereGeometry(0.05, 20, 14), padMat);
+  pad.scale.set(0.6, 1.2, 0.5);
+  pad.position.set(-dir * 0.42, -0.14, -0.1);
+  half.add(pad);
+  const sensor = new THREE.Mesh(new THREE.SphereGeometry(0.012, 10, 8), glowMat);
+  sensor.position.set(-dir * 0.42, -0.14, -0.13);
+  half.add(sensor);
+
+  // hinge stud
+  const stud = new THREE.Mesh(new THREE.CylinderGeometry(0.025, 0.025, 0.03, 16), metalMat);
+  stud.rotation.x = Math.PI / 2;
+  stud.position.set(dir * 0.54, 0.22, 0.07);
+  half.add(stud);
+
+  glasses.add(half);
+
+  // temple arm
+  const temple = new THREE.Group();
+  temple.position.set(dir * 1.22, 0.2, -0.1);
+  temple.rotation.y = -dir * 0.05;
+  const arm = new THREE.Mesh(new RoundedBoxGeometry(0.06, 0.1, 2.0, 3, 0.025), frameMat);
+  arm.position.z = -1.0;
+  temple.add(arm);
+  const tip = new THREE.Mesh(new RoundedBoxGeometry(0.055, 0.09, 0.6, 3, 0.025), frameMat);
+  tip.position.set(0, -0.14, -2.2);
+  tip.rotation.x = -0.5;
+  temple.add(tip);
+  // electronics pod
+  const pod = new THREE.Mesh(new RoundedBoxGeometry(0.1, 0.17, 0.85, 4, 0.045), frameMat);
+  pod.position.set(0, 0, -0.6);
+  temple.add(pod);
+  const strip = new THREE.Mesh(new THREE.BoxGeometry(0.005, 0.012, 0.42), metalMat);
+  strip.position.set(dir * 0.052, -0.045, -0.6);
+  temple.add(strip);
+
+  if (dir === -1) {
+    // speaker grille for reminders
+    for (let i = 0; i < 6; i++) {
+      const hole = new THREE.Mesh(new THREE.CylinderGeometry(0.009, 0.009, 0.01, 10), darkGlass);
+      hole.rotation.z = Math.PI / 2;
+      hole.position.set(-0.051, 0.03, -0.42 - i * 0.04);
+      temple.add(hole);
+    }
+    const led = new THREE.Mesh(new THREE.SphereGeometry(0.012, 10, 8), glowMat);
+    led.position.set(-0.051, 0.03, -0.82);
+    temple.add(led);
+  } else {
+    // GPS module indicator
+    const gps = new THREE.Mesh(new RoundedBoxGeometry(0.01, 0.05, 0.18, 2, 0.004), glowMat);
+    gps.position.set(0.052, 0.03, -0.62);
+    temple.add(gps);
+  }
+  glasses.add(temple);
+}
+
+// bridge
+const bridgeCurve = new THREE.CatmullRomCurve3([
+  new THREE.Vector3(-0.17, 0.14, 0.02),
+  new THREE.Vector3(0, 0.19, 0.06),
+  new THREE.Vector3(0.17, 0.14, 0.02),
+]);
+glasses.add(new THREE.Mesh(new THREE.TubeGeometry(bridgeCurve, 32, 0.038, 16), frameMat));
+
+glasses.position.y = -0.05;
+const pivot = new THREE.Group();   // pivot so the model rotates around its visual center
+glasses.position.z = 0.6;
+pivot.add(glasses);
+scene.add(pivot);
+
+/* ---------------- Scroll keyframes ---------------- */
+// p: scroll progress · ry/rx: rotation · x/y: position · s: scale
+const KF_DESKTOP = [
+  { p: 0.00, ry: -0.55, rx: 0.18, x: 1.2,  y: 0.0,  s: 0.82 },
+  { p: 0.12, ry: -0.35, rx: 0.12, x: 1.2,  y: 0.0,  s: 0.82 },
+  { p: 0.30, ry: -0.25, rx: 0.06, x: 1.45, y: -0.2, s: 1.2 },
+  { p: 0.55, ry: 1.15,  rx: 0.12, x: -1.45, y: 0.05, s: 0.95 },
+  { p: 0.77, ry: -1.1,  rx: 0.25, x: 1.3,  y: 0.0,  s: 0.95 },
+  { p: 0.96, ry: 0.0,   rx: 0.05, x: 0.0,  y: 0.4,  s: 0.95 },
+  { p: 1.00, ry: 0.0,   rx: 0.05, x: 0.0,  y: 0.4,  s: 0.95 },
+];
+const mobileFrames = f => KF_DESKTOP.map(k => ({ ...k, x: 0, y: 0.75, s: k.s * f }));
+let KF = KF_DESKTOP;
+
+const smooth = t => t * t * (3 - 2 * t);
+function sample(p) {
+  let i = 0;
+  while (i < KF.length - 2 && p > KF[i + 1].p) i++;
+  const a = KF[i], b = KF[i + 1];
+  const t = smooth(THREE.MathUtils.clamp((p - a.p) / (b.p - a.p), 0, 1));
+  const out = {};
+  for (const k of ['ry', 'rx', 'x', 'y', 's']) out[k] = a[k] + (b[k] - a[k]) * t;
+  return out;
+}
+
+/* ---------------- Resize ---------------- */
+function resize() {
+  const w = canvas.clientWidth, h = canvas.clientHeight;
+  renderer.setSize(w, h, false);
+  camera.aspect = w / h;
+  camera.updateProjectionMatrix();
+  // on narrow screens, center the model above the text and shrink it to fit the width
+  KF = w < 820 ? mobileFrames(THREE.MathUtils.clamp(camera.aspect * 0.85, 0.36, 0.7)) : KF_DESKTOP;
+}
+window.addEventListener('resize', resize);
+resize();
+
+/* ---------------- Scroll / panels ---------------- */
+const showcase = document.getElementById('showcase');
+const panels = [...document.querySelectorAll('.panel')];
+const dots = [...document.querySelectorAll('#progress span')];
+const hint = document.getElementById('scrollHint');
+const nav = document.getElementById('nav');
+let progress = 0;
+
+function fade(p, a, b, w = 0.05) {
+  if (p < a - w || p > b + w) return 0;
+  if (p < a) return a <= 0 ? 1 : (p - (a - w)) / w;
+  if (p > b) return b >= 1 ? 1 : 1 - (p - b) / w;
+  return 1;
+}
+
+function onScroll() {
+  const r = showcase.getBoundingClientRect();
+  progress = THREE.MathUtils.clamp(-r.top / (r.height - innerHeight), 0, 1);
+  panels.forEach(el => {
+    const o = fade(progress, +el.dataset.in, +el.dataset.out);
+    const dy = (1 - o) * 30;
+    el.style.opacity = o;
+    el.style.transform = el.classList.contains('center') ? `translate(-50%, ${dy}px)` : `translateY(calc(-50% + ${dy}px))`;
+    if (innerWidth < 820 && !el.classList.contains('center')) el.style.transform = `translateY(${dy}px)`;
+    el.classList.toggle('active', o > 0.5);
+  });
+  const step = progress < 0.18 ? 0 : progress < 0.43 ? 1 : progress < 0.66 ? 2 : progress < 0.87 ? 3 : 4;
+  dots.forEach((d, i) => d.classList.toggle('on', i === step));
+  hint.style.opacity = progress > 0.03 ? 0 : 1;
+  nav.classList.toggle('scrolled', scrollY > 20);
+}
+window.addEventListener('scroll', onScroll, { passive: true });
+window.addEventListener('resize', onScroll);
+onScroll();
+
+/* ---------------- Pointer parallax ---------------- */
+const mouse = { x: 0, y: 0 };
+window.addEventListener('pointermove', e => {
+  mouse.x = (e.clientX / innerWidth) * 2 - 1;
+  mouse.y = (e.clientY / innerHeight) * 2 - 1;
+});
+
+/* ---------------- Animate ---------------- */
+const reduceMotion = matchMedia('(prefers-reduced-motion: reduce)').matches;
+const clock = new THREE.Clock();
+const cur = { ...sample(0) };
+let visible = true;
+new IntersectionObserver(([e]) => { visible = e.isIntersecting; }, { threshold: 0 }).observe(showcase);
+
+function tick() {
+  requestAnimationFrame(tick);
+  if (!visible) return;
+  const t = clock.getElapsedTime();
+  const target = sample(progress);
+  const k = reduceMotion ? 1 : 0.075;
+  for (const key in cur) cur[key] += (target[key] - cur[key]) * k;
+
+  // intro: spin and grow in on load
+  const intro = reduceMotion ? 1 : 1 - Math.pow(1 - Math.min(t / 1.8, 1), 3);
+  const float = reduceMotion ? 0 : Math.sin(t * 1.1) * 0.05;
+
+  pivot.position.set(cur.x, cur.y + float, 0);
+  pivot.rotation.y = cur.ry + (1 - intro) * 2.4 + mouse.x * 0.12;
+  pivot.rotation.x = cur.rx + mouse.y * 0.06 + Math.sin(t * 0.7) * 0.02;
+  pivot.rotation.z = Math.sin(t * 0.6) * 0.015;
+  pivot.scale.setScalar(cur.s * (0.6 + 0.4 * intro));
+
+  // camera ring "scans" faster while the face-recognition step is on screen
+  const scanning = progress > 0.2 && progress < 0.42;
+  glowMat.emissiveIntensity = 1.2 + Math.sin(t * (scanning ? 7 : 2)) * (scanning ? 1.4 : 0.6);
+
+  // the recognized face fades into the lens, with a slight "pop" as it appears
+  const hudTarget = fade(progress, 0.25, 0.38, 0.04);
+  hudMat.opacity += (hudTarget - hudMat.opacity) * (reduceMotion ? 1 : 0.12);
+  hud.scale.setScalar(0.9 + 0.1 * hudMat.opacity);
+  hud.visible = hudMat.opacity > 0.01;
+
+  renderer.render(scene, camera);
+}
+tick();
+
+/* ---------------- Frame colors ---------------- */
+function setColor(name) {
+  const c = COLORS[name];
+  frameMat.color.setHex(c.c);
+  frameMat.roughness = c.rough;
+  document.getElementById('swatchName').textContent = c.name;
+  document.getElementById('buyColor').textContent = c.name;
+  document.querySelectorAll('.swatch').forEach(s => s.classList.toggle('on', s.dataset.color === name));
+}
+document.querySelectorAll('.swatch').forEach(s => s.addEventListener('click', () => setColor(s.dataset.color)));
+</script>
+
+<script>
+  // Reveal on scroll
+  const io = new IntersectionObserver(entries => {
+    entries.forEach(e => { if (e.isIntersecting) { e.target.classList.add('in'); io.unobserve(e.target); } });
+  }, { threshold: 0.15 });
+  document.querySelectorAll('.reveal').forEach(el => io.observe(el));
+
+  // Cart
+  let count = 0;
+  const countEl = document.getElementById('cartCount');
+  const toast = document.getElementById('toast');
+  const toastText = document.getElementById('toastText');
+  let toastTimer;
+  document.querySelectorAll('.add').forEach(btn => btn.addEventListener('click', () => {
+    count++;
+    countEl.textContent = count;
+    countEl.classList.add('show');
+    const color = document.getElementById('buyColor').textContent;
+    toastText.textContent = `${btn.dataset.item} (${color}) ajouté au panier`;
+    toast.classList.add('show');
+    clearTimeout(toastTimer);
+    toastTimer = setTimeout(() => toast.classList.remove('show'), 2600);
+  }));
+</script>
+</body>
+</html>
